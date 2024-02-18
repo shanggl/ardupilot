@@ -1,0 +1,189 @@
+# hw definition file for NEUTRONRCF435VTOL hardware
+# designed by emsr
+
+
+# MCU class and specific type
+MCU AT32F435_437xM AT32F435_437xMxx
+
+
+# board ID for firmware load
+APJ_BOARD_ID 1125
+
+# crystal frequency
+OSCILLATOR_HZ 8000000
+
+define STM32_ST_USE_TIMER 2
+define CH_CFG_ST_RESOLUTION 32
+
+FLASH_SIZE_KB 4023
+
+
+# only one I2C bus
+I2C_ORDER I2C3
+
+# order of UARTs (and USB)
+SERIAL_ORDER OTG1 USART3 UART4 USART1 UART8 USART2
+
+# LEDs
+PD15 LED_BLUE OUTPUT LOW GPIO(0)
+PD14 LED_GREEN OUTPUT LOW GPIO(1)
+
+define HAL_GPIO_A_LED_PIN 0
+define HAL_GPIO_B_LED_PIN 1
+
+# buzzer
+PC13 BUZZER OUTPUT GPIO(80) LOW
+define HAL_BUZZER_PIN 80
+
+
+
+# spi1 bus for IMU
+PA5 SPI1_SCK SPI1
+PA6 SPI1_MISO SPI1
+PA7 SPI1_MOSI SPI1
+
+# spi2 for OSD
+PD1 SPI2_SCK SPI2
+PD3 SPI2_MISO SPI2
+PD4 SPI2_MOSI SPI2
+
+
+# spi4 for sdcard
+PE2 SPI4_SCK SPI4
+PE5 SPI4_MISO SPI4
+PE6 SPI4_MOSI SPI4
+
+PE4 SDCARD_CS CS
+PA4 BMI088_A_CS CS
+PC14 BMI088_G_CS CS
+PD6 FLASH_CS CS
+PD5 AT7456_CS CS
+
+# only one I2C bus in normal config
+PC0 I2C3_SCL I2C3
+PC1 I2C3_SDA I2C3
+
+# analog pins
+PB0 BATT_VOLTAGE_SENS ADC1 SCALE(1)
+PB1 BATT_CURRENT_SENS ADC1 SCALE(1)
+
+# define default battery setup
+# PB0 - ADC12_CH1
+define HAL_BATT_VOLT_PIN 1
+# PB1 - ADC12_CH2
+define HAL_BATT_CURR_PIN 2
+define HAL_BATT_VOLT_SCALE 10.1
+define HAL_BATT_CURR_SCALE 17.0
+
+#analog rssi pin (also could be used as analog airspeed input)
+# PB1 - ADC12_CH9
+#define BOARD_RSSI_ANA_PIN 9
+
+# USART1
+PA9 USART1_TX USART1
+PA10 USART1_RX USART1
+
+
+# alternative RC input using UART
+PA2 USART2_TX USART2 NODMA
+PA3 USART2_RX USART2 NODMA ALT(1)
+
+# USART3
+PC4 USART3_TX USART3
+PC5 USART3_RX USART3
+
+# UART4
+PA0 UART4_TX UART4
+PA1 UART4_RX UART4
+
+# UART8
+PC3 UART8_RX UART8 NODMA
+PC2 UART8_TX UART8 NODMA ALT(1)
+
+# PA10 IO-debug-console
+PA11 OTG_FS_DM OTG1
+PA12 OTG_FS_DP OTG1
+
+# USB detection
+PB12 VBUS INPUT OPENDRAIN
+
+# debug (disabled out to allow for both LEDs)
+#PA13 JTMS-SWDIO SWD
+#PA14 JTCK-SWCLK SWD
+
+# PWM out pins. Note that channel order follows the ArduPilot motor
+# order conventions
+PB6  TIM4_CH1 TIM4 PWM(1) GPIO(50)
+PB7  TIM4_CH2 TIM4 PWM(2) GPIO(51)
+PB8  TIM4_CH3 TIM4 PWM(3) GPIO(52)
+PB9  TIM4_CH4 TIM4 PWM(4) GPIO(53)
+PC6  TIM3_CH1 TIM3 PWM(5) GPIO(54)
+PC7  TIM3_CH2 TIM3 PWM(6) GPIO(55)
+PC8  TIM3_CH3 TIM3 PWM(7) GPIO(56)
+PC9  TIM3_CH4 TIM3 PWM(8) GPIO(57)
+
+define HAL_STORAGE_SIZE 15360
+STORAGE_FLASH_PAGE 1
+
+# reserve 32k for bootloader and 32k for flash storage
+FLASH_RESERVE_START_KB 64
+
+#################################################
+###                 DEVICES                   ###
+#################################################
+
+# BMI088 on SPI1
+SPIDEV bmi088_g SPI1 DEVID1  BMI088_G_CS  MODE3 10*MHZ 10*MHZ
+SPIDEV bmi088_a SPI1 DEVID2  BMI088_A_CS  MODE3 10*MHZ 10*MHZ
+
+
+# SD Card on SPI4
+SPIDEV sdcard SPI4 DEVID3 SDCARD_CS MODE3 400*KHZ 25*MHZ
+
+# Flash Card on SPI3 (option)
+# SPIDEV dataflash SPI3 DEVID5 FLASH_CS MODE3 500*KHZ 25*MHZ
+
+# one IMU
+IMU BMI088 SPI:bmi088_a SPI:bmi088_g ROTATION_ROLL_180_YAW_0
+#ROTATION_ROLL_180_YAW_270
+
+# one baro, multiple possible choices for different board variants
+BARO BMP280 I2C:2:0x76
+
+# osd max7456 
+SPIDEV osd  SPI2 DEVID6  AT7456_CS   MODE0  10*MHZ   10*MHZ
+
+
+
+# filesystem setup on sdcard
+define HAL_OS_FATFS_IO 1
+
+# setup for OSD
+define OSD_ENABLED 1
+define HAL_OSD_TYPE_DEFAULT 1
+ROMFS_WILDCARD libraries/AP_OSD/fonts/font0.bin
+
+# disable SMBUS battery monitors to save flash
+define AP_BATTERY_SMBUS_ENABLED 0
+
+# disable parachute and sprayer to save flash
+define HAL_PARACHUTE_ENABLED 0
+define HAL_SPRAYER_ENABLED 0
+
+# reduce max size of embedded params for apj_tool.py
+define AP_PARAM_MAX_EMBEDDED_PARAM 1024
+
+# save some flash
+include ../include/save_some_flash.inc
+
+# only include ublox GPS driver
+include ../include/minimal_GPS.inc
+
+
+# enable DFU reboot for installing bootloader
+# note that if firmware is build with --secure-bl then DFU is
+# disabled
+ENABLE_DFU_BOOT 1
+
+# bootloader embedding / bootloader flashing not available
+define AP_BOOTLOADER_FLASHING_ENABLED 0

@@ -1,0 +1,39 @@
+# hw definition file for processing by chibios_pins.py
+# for minimal F435 bootloader
+
+# MCU class and specific type
+MCU AT32F435_437xM AT32F435_437xMxx
+
+# board ID for firmware load
+APJ_BOARD_ID 1125
+
+# crystal frequency
+OSCILLATOR_HZ 8000000
+
+FLASH_SIZE_KB 4032
+
+
+# bootloader is installed at zero offset
+FLASH_RESERVE_START_KB 0
+
+# LEDs
+PD15 LED_BOOTLOADER OUTPUT LOW
+PD14 LED_ACTIVITY  OUTPUT LOW
+define HAL_LED_ON 0
+
+# the location where the bootloader will put the firmware
+FLASH_BOOTLOADER_LOAD_KB 64
+
+
+# order of UARTs
+SERIAL_ORDER OTG1
+
+PA11 OTG_FS_DM OTG1
+PA12 OTG_FS_DP OTG1
+
+# Add CS pins to ensure they are high in bootloader
+PA4 BMI088_A_CS CS
+PC14 BMI088_G_CS CS
+PE4 SDCARD_CS CS
+PD6 FLASH_CS CS
+PD5 AT7456_CS CS

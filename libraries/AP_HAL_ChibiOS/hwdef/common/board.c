@@ -155,7 +155,18 @@ static const gpio_config_t gpio_default_config = {
 /*===========================================================================*/
 /* Driver local functions.                                                   */
 /*===========================================================================*/
+#ifdef AT32F435_437xx
+static void gpio_init(stm32_gpio_t *gpiop, const gpio_setup_t *config) {
 
+  gpiop->OMODE   = config->otyper;
+  gpiop->ODRVR   = config->ospeedr;
+  gpiop->PULL    = config->pupdr;
+  gpiop->ODT     = config->odr;
+  gpiop->MUXL    = config->afrl;
+  gpiop->MUXH    = config->afrh;
+  gpiop->CFGR    = config->moder;
+}
+#else
 static void gpio_init(stm32_gpio_t *gpiop, const gpio_setup_t *config) {
 
   gpiop->OTYPER  = config->otyper;
@@ -166,6 +177,7 @@ static void gpio_init(stm32_gpio_t *gpiop, const gpio_setup_t *config) {
   gpiop->AFRH    = config->afrh;
   gpiop->MODER   = config->moder;
 }
+#endif
 
 static void stm32_gpio_init(void) {
 
@@ -186,6 +198,7 @@ static void stm32_gpio_init(void) {
   rccResetAHB1(STM32_GPIO_EN_MASK);
   rccEnableAHB1(STM32_GPIO_EN_MASK, true);
 #endif
+
 
   /* Initializing all the defined GPIO ports.*/
 #if STM32_HAS_GPIOA
@@ -221,6 +234,10 @@ static void stm32_gpio_init(void) {
 #if STM32_HAS_GPIOK
   gpio_init(GPIOK, &gpio_default_config.PKData);
 #endif
+
+
+
+
 }
 
 #endif //!STM32F100_MCUCONF

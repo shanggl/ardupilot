@@ -817,6 +817,10 @@ class ChibiOSHWDef(object):
               mcu_series.startswith('STM32G4') or
               mcu_series.startswith('STM32L4')):
             return [2] * (self.get_config('FLASH_SIZE_KB', type=int)//2)
+        elif mcu_series.startswith('AT32F435_437xM'):
+            return [2048,1984]
+        elif mcu_series.startswith('AT32F435_437xG'):
+            return [ 2 ] * self.get_config('FLASH_SIZE_KB', type=int)//2
         else:
             raise Exception("Unsupported flash size MCU %s" % mcu_series)
 
