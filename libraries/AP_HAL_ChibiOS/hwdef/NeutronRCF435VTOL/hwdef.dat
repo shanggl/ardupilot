@@ -15,8 +15,14 @@ OSCILLATOR_HZ 8000000
 define STM32_ST_USE_TIMER 2
 define CH_CFG_ST_RESOLUTION 32
 
-FLASH_SIZE_KB 4023
+#flash size defines 
 
+FLASH_SIZE_KB 4023
+define HAL_STORAGE_SIZE 15360
+#STORAGE_FLASH_PAGE 1
+
+# bootloader is installed at zero offset
+FLASH_RESERVE_START_KB 0
 
 # only one I2C bus
 I2C_ORDER I2C3
@@ -122,11 +128,7 @@ PC7  TIM3_CH2 TIM3 PWM(6) GPIO(55)
 PC8  TIM3_CH3 TIM3 PWM(7) GPIO(56)
 PC9  TIM3_CH4 TIM3 PWM(8) GPIO(57)
 
-define HAL_STORAGE_SIZE 15360
-STORAGE_FLASH_PAGE 1
 
-# reserve 32k for bootloader and 32k for flash storage
-FLASH_RESERVE_START_KB 64
 
 #################################################
 ###                 DEVICES                   ###
@@ -155,6 +157,7 @@ SPIDEV osd  SPI2 DEVID6  AT7456_CS   MODE0  10*MHZ   10*MHZ
 
 
 
+
 # filesystem setup on sdcard
 define HAL_OS_FATFS_IO 1
 
@@ -176,8 +179,7 @@ define AP_PARAM_MAX_EMBEDDED_PARAM 1024
 # save some flash
 include ../include/save_some_flash.inc
 
-# only include ublox GPS driver
-include ../include/minimal_GPS.inc
+include ../include/minimize_fpv_osd.inc
 
 
 # enable DFU reboot for installing bootloader
