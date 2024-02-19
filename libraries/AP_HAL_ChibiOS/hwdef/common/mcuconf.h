@@ -53,10 +53,8 @@
 #include "stm32f3_mcuconf.h"
 #elif defined(STM32F4) || defined(STM32F7)
 #include "stm32f47_mcuconf.h"
-#elif defined(STM32H730xx) || defined(STM32H723xx)
+#elif defined(STM32H730xx)
 #include "stm32h7_type2_mcuconf.h"
-#elif defined(STM32H7A3xx)
-#include "stm32h7_A3_mcuconf.h"
 #elif defined(STM32H7)
 #include "stm32h7_mcuconf.h"
 #elif defined(STM32G4)
@@ -65,6 +63,8 @@
 #include "stm32l4+_mcuconf.h"
 #elif defined(STM32L4)
 #include "stm32l4_mcuconf.h"
+#elif defined(AT32F435_437xM)
+#include "at32f435_437_mcuconf.h"
 #else
 #error "Unsupported MCU"
 #endif
