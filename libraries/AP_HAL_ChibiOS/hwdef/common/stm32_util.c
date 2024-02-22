@@ -221,6 +221,8 @@ void get_rtc_backup(uint8_t idx, uint32_t *v, uint8_t n)
         *v++ = (dr[n/2]&0xFFFF) | (dr[n/2+1]<<16);
 #elif defined(STM32G4)
         *v++ = ((__IO uint32_t *)&TAMP->BKP0R)[idx++];
+#elif defined(AT32F4)
+        *v++ = ((__IO uint32_t *)(ERTC_BASE+0x50))[idx++];
 #else
         *v++ = ((__IO uint32_t *)&RTC->BKP0R)[idx++];
 #endif
@@ -230,7 +232,9 @@ void get_rtc_backup(uint8_t idx, uint32_t *v, uint8_t n)
 // set n RTC backup registers starting at given idx
 void set_rtc_backup(uint8_t idx, const uint32_t *v, uint8_t n)
 {
-#if !defined(STM32F1)
+#if defined(AT32F4)
+    crm_periph_clock_enable(CRM_PWC_PERIPH_CLOCK, TRUE);
+#elif !defined(STM32F1)
     if ((RCC->BDCR & RCC_BDCR_RTCEN) == 0) {
         RCC->BDCR |= STM32_RTCSEL;
         RCC->BDCR |= RCC_BDCR_RTCEN;
@@ -249,6 +253,8 @@ void set_rtc_backup(uint8_t idx, const uint32_t *v, uint8_t n)
         dr[n/2+1] = (*v) >> 16;
 #elif defined(STM32G4)
         ((__IO uint32_t *)&TAMP->BKP0R)[idx++] = *v++;
+#elif defined(AT32F4)
+        ((__IO uint32_t *)(ERTC_BASE+0x50))[idx++] = *v++;
 #else
         ((__IO uint32_t *)&RTC->BKP0R)[idx++] = *v++;
 #endif
