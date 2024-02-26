@@ -494,6 +494,67 @@ static CrashCatcherReturnCodes CrashCatcher_DumpEndHex(void)
         return g_crashCatcherDumpEndReturn;
 }
 
+
+#if defined(AT32F4)
+
+/*
+  initialise serial ports
+ */
+static void init_uarts(void)
+{
+    usart_type *u = HAL_CRASH_SERIAL_PORT;
+    IRQ_DISABLE_HAL_CRASH_SERIAL_PORT();
+    RCC_RESET_HAL_CRASH_SERIAL_PORT();
+
+    //init usart_port directly 
+    usart_init(u,HAL_CRASH_SERIAL_PORT_BAUD,USART_DATA_8BITS,USART_STOP_1_BIT);
+    usart_transmitter_enable(u,TRUE);
+    usart_receiver_enable(u,TRUE);
+    usart_enable(u,TRUE);
+    
+    uart_initialised = true;
+}
+
+int CrashCatcher_getc(void);
+int CrashCatcher_getc(void)
+{
+    if (!uart_initialised) {
+        init_uarts();
+    }
+    usart_type *u = HAL_CRASH_SERIAL_PORT;
+    // wait for a follwing string, only then do we start dumping
+    static const char* wait_for_string = "dump_crash_log";
+    uint8_t curr_off = 0;
+    while (true) {
+        while (!(USART_RDBF_FLAG & u->sts)) {}
+        uint8_t c = u->dt;
+        if (c == wait_for_string[curr_off]) {
+            curr_off++;
+            if (curr_off == strlen(wait_for_string)) {
+                return 0;
+            }
+        } else {
+            curr_off = 0;
+        }
+    }
+    return -1;
+}
+
+void CrashCatcher_putc(int c);
+void CrashCatcher_putc(int c)
+{
+    if (!uart_initialised) {
+        init_uarts();
+    }
+    usart_type *u = HAL_CRASH_SERIAL_PORT;
+    u->dt = c & 0xFF;
+    while (!(USART_TDC_FLAG & u->sts)) {
+        // keep alive while dump is happening
+        stm32_watchdog_pat();
+    }
+}
+
+#else
 /*
   initialise serial ports
  */
@@ -585,4 +646,5 @@ void CrashCatcher_putc(int c)
         stm32_watchdog_pat();
     }
 }
+#endif  //if defined(AT32F4)
 #endif // #if defined(HAL_CRASH_SERIAL_PORT)
