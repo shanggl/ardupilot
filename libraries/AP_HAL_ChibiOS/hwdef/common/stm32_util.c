@@ -390,6 +390,41 @@ void palLineSetPushPull(ioline_t line, enum PalPushPull pp)
 
 #endif // F7, H7, F4
 
+#if defined(AT32F4)
+/*
+  read mode of a pin. This allows a pin config to be read, changed and
+  then written back
+ */
+iomode_t palReadLineMode(ioline_t line)
+{
+    ioportid_t port = PAL_PORT(line);
+    uint8_t pad = PAL_PAD(line);
+    iomode_t ret = 0;
+    ret |= (port->CFGR >> (pad*2)) & 0x3;
+    ret |= ((port->OMODE >> pad)&1) << 2;
+    ret |= ((port->ODRVR >> (pad*2))&3) << 3;
+    ret |= ((port->PULL >> (pad*2))&3) << 5;
+    if (pad < 8) {
+        ret |= ((port->MUXL >> (pad*4))&0xF) << 7;
+    } else {
+        ret |= ((port->MUXH >> ((pad-8)*4))&0xF) << 7;
+    }
+    return ret;
+}
+
+/*
+  set pin as pullup, pulldown or floating
+ */
+void palLineSetPushPull(ioline_t line, enum PalPushPull pp)
+{
+    ioportid_t port = PAL_PORT(line);
+    uint8_t pad = PAL_PAD(line);
+    port->PULL = (port->PULL & ~(3<<(pad*2))) | (pp<<(pad*2));
+}
+
+
+#endif
+
 void stm32_cacheBufferInvalidate(const void *p, size_t size)
 {
     cacheBufferInvalidate(p, size);
