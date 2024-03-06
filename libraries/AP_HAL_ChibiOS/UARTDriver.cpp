@@ -401,6 +401,8 @@ void UARTDriver::_begin(uint32_t b, uint16_t rxS, uint16_t txS)
                     chSysUnlock();
 #if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
                     dmaStreamSetPeripheral(rxdma, &((SerialDriver*)sdef.serial)->usart->RDR);
+#elif defined(AT32F4)
+                    dmaStreamSetPeripheral(rxdma,&((SerialDriver*)sdef.serial)->usart->dt);
 #else
                     dmaStreamSetPeripheral(rxdma, &((SerialDriver*)sdef.serial)->usart->DR);
 #endif // STM32F7
@@ -512,6 +514,8 @@ void UARTDriver::dma_tx_allocate(Shared_DMA *ctx)
     chSysUnlock();
 #if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
     dmaStreamSetPeripheral(txdma, &((SerialDriver*)sdef.serial)->usart->TDR);
+#elif defined(AT32F4)
+    dmaStreamSetPeripheral(txdma, &((SerialDriver*)sdef.serial)->usart->dt);
 #else
     dmaStreamSetPeripheral(txdma, &((SerialDriver*)sdef.serial)->usart->DR);
 #endif // STM32F7
@@ -559,7 +563,7 @@ void UARTDriver::rx_irq_cb(void* self)
 #if defined(STM32F7) || defined(STM32H7)
     //disable dma, triggering DMA transfer complete interrupt
     uart_drv->rxdma->stream->CR &= ~STM32_DMA_CR_EN;
-#elif defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
+#elif defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS) || defined(AT32F4)
     //disable dma, triggering DMA transfer complete interrupt
     dmaStreamDisable(uart_drv->rxdma);
     uart_drv->rxdma->channel->CCR &= ~STM32_DMA_CR_EN;
@@ -1329,11 +1333,19 @@ void UARTDriver::set_flow_control(enum flow_control flowcontrol)
         _rts_is_active = true;
         // disable hardware CTS support
         chSysLock();
+#if defined(AT32F4)
+        if ((sd->usart->ctrl3 & (USART_CR3_CTSE | USART_CR3_RTSE)) != 0) {
+            sd->usart->ctrl1 &= ~USART_CR1_UE;
+            sd->usart->ctrl3 &= ~(USART_CR3_CTSE | USART_CR3_RTSE);
+            sd->usart->ctrl1 |= USART_CR1_UE;
+        }
+#else
         if ((sd->usart->CR3 & (USART_CR3_CTSE | USART_CR3_RTSE)) != 0) {
             sd->usart->CR1 &= ~USART_CR1_UE;
             sd->usart->CR3 &= ~(USART_CR3_CTSE | USART_CR3_RTSE);
             sd->usart->CR1 |= USART_CR1_UE;
         }
+#endif
         chSysUnlock();
         break;
 
@@ -1351,6 +1363,15 @@ void UARTDriver::set_flow_control(enum flow_control flowcontrol)
         _rts_is_active = true;
         // enable hardware CTS support, disable RTS support as we do that in software
         chSysLock();
+#if defined(AT32F4)
+        if ((sd->usart->ctrl3 & (USART_CR3_CTSE | USART_CR3_RTSE)) != USART_CR3_CTSE) {
+            // CTSE and RTSE can only be written when uart is disabled
+            sd->usart->ctrl1 &= ~USART_CR1_UE;
+            sd->usart->ctrl3 |= USART_CR3_CTSE;
+            sd->usart->ctrl3 &= ~USART_CR3_RTSE;
+            sd->usart->ctrl1 |= USART_CR1_UE;
+        }
+#else
         if ((sd->usart->CR3 & (USART_CR3_CTSE | USART_CR3_RTSE)) != USART_CR3_CTSE) {
             // CTSE and RTSE can only be written when uart is disabled
             sd->usart->CR1 &= ~USART_CR1_UE;
@@ -1358,6 +1379,7 @@ void UARTDriver::set_flow_control(enum flow_control flowcontrol)
             sd->usart->CR3 &= ~USART_CR3_RTSE;
             sd->usart->CR1 |= USART_CR1_UE;
         }
+#endif
         chSysUnlock();
         break;
     }
@@ -1574,7 +1596,7 @@ bool UARTDriver::set_options(uint16_t options)
     // Check flow control, might have to disable if RTS line is gone
     set_flow_control(_flow_control);
 
-#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)|| defined(AT32F4)
     // F7 has built-in support for inversion in all uarts
     ioline_t rx_line = (options & OPTION_SWAP)?atx_line:arx_line;
     ioline_t tx_line = (options & OPTION_SWAP)?arx_line:atx_line;
@@ -1667,7 +1689,24 @@ bool UARTDriver::set_options(uint16_t options)
     }
 
     set_pushpull(options);
+#if defined(AT32F4)
+    if (sd->usart->ctrl2 == cr2 &&
+        sd->usart->ctrl1 == cr3) {
+        // no change
+        return ret;
+    }
 
+    if (was_enabled) {
+        sd->usart->ctrl1 &= ~USART_CR1_UE;
+    }
+
+    sd->usart->ctrl2 = cr2;
+    sd->usart->ctrl2 = cr3;
+
+    if (was_enabled) {
+        sd->usart->ctrl1 |= USART_CR1_UE;
+    }
+#else
     if (sd->usart->CR2 == cr2 &&
         sd->usart->CR3 == cr3) {
         // no change
@@ -1684,6 +1723,7 @@ bool UARTDriver::set_options(uint16_t options)
     if (was_enabled) {
         sd->usart->CR1 |= USART_CR1_UE;
     }
+#endif // at32f4
 #endif // HAL_USE_SERIAL == TRUE
     return ret;
 }
