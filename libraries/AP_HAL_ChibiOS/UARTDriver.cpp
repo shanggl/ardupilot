@@ -465,7 +465,11 @@ void UARTDriver::_begin(uint32_t b, uint16_t rxS, uint16_t txS)
             if (rx_dma_enabled) {
                 //Configure serial driver to skip handling RX packets
                 //because we will handle them via DMA
+#if defined(AT32F4)
+                ((SerialDriver*)sdef.serial)->usart->ctrl1 &= ~USART_CR1_RXNEIE;
+#else
                 ((SerialDriver*)sdef.serial)->usart->CR1 &= ~USART_CR1_RXNEIE;
+#endif
                 // Start DMA
                 if (!was_initialised) {
                     dmaStreamDisable(rxdma);
@@ -563,10 +567,13 @@ void UARTDriver::rx_irq_cb(void* self)
 #if defined(STM32F7) || defined(STM32H7)
     //disable dma, triggering DMA transfer complete interrupt
     uart_drv->rxdma->stream->CR &= ~STM32_DMA_CR_EN;
-#elif defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS) || defined(AT32F4)
+#elif defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS) 
     //disable dma, triggering DMA transfer complete interrupt
     dmaStreamDisable(uart_drv->rxdma);
     uart_drv->rxdma->channel->CCR &= ~STM32_DMA_CR_EN;
+#elif defined(AT32F4)
+    dmaStreamDisable(uart_drv->rxdma);
+    uart_drv->rxdma->channel->ctrl &= ~STM32_DMA_CR_EN;
 #else
     volatile uint16_t sr = ((SerialDriver*)(uart_drv->sdef.serial))->usart->SR;
     if(sr & USART_SR_IDLE) {
@@ -1089,6 +1096,8 @@ void UARTDriver::_rx_timer_tick(void)
         //let's handle that here so that we can continue receiving
 #if defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
         bool enabled = (rxdma->channel->CCR & STM32_DMA_CR_EN);
+#elif defined(AT32F4)
+        bool enabled = (rxdma->channel->ctrl & STM32_DMA_CR_EN);
 #else
         bool enabled = (rxdma->stream->CR & STM32_DMA_CR_EN);
 #endif
@@ -1473,7 +1482,11 @@ void UARTDriver::configure_parity(uint8_t v)
     if (rx_dma_enabled) {
         // Configure serial driver to skip handling RX packets
         // because we will handle them via DMA
+#if defined(AT32F4)
+        ((SerialDriver*)sdef.serial)->usart->ctrl1 &= ~USART_CR1_RXNEIE;
+#else    
         ((SerialDriver*)sdef.serial)->usart->CR1 &= ~USART_CR1_RXNEIE;
+#endif //at32f4
     }
 #endif
 #endif // HAL_USE_SERIAL
@@ -1509,7 +1522,11 @@ void UARTDriver::set_stop_bits(int n)
     if (rx_dma_enabled) {
         //Configure serial driver to skip handling RX packets
         //because we will handle them via DMA
+#if defined(AT32F4)
+        ((SerialDriver*)sdef.serial)->usart->ctrl1 &= ~USART_CR1_RXNEIE;
+#else
         ((SerialDriver*)sdef.serial)->usart->CR1 &= ~USART_CR1_RXNEIE;
+#endif        
     }
 #endif
 #endif // HAL_USE_SERIAL
@@ -1581,10 +1598,16 @@ bool UARTDriver::set_options(uint16_t options)
 
 #if HAL_USE_SERIAL == TRUE
     SerialDriver *sd = (SerialDriver*)(sdef.serial);
+
+#if defined(AT32F4)
+    uint32_t cr2 = sd->usart->ctrl2;
+    uint32_t cr3 = sd->usart->ctrl3;
+    bool was_enabled = (sd->usart->ctrl1 & USART_CR1_UE);
+#else
     uint32_t cr2 = sd->usart->CR2;
     uint32_t cr3 = sd->usart->CR3;
     bool was_enabled = (sd->usart->CR1 & USART_CR1_UE);
-
+#endif //at32f4
     /*
       allow for RX, TX, RTS and CTS pins to be remapped via BRD_ALT_CONFIG
      */
@@ -1596,7 +1619,7 @@ bool UARTDriver::set_options(uint16_t options)
     // Check flow control, might have to disable if RTS line is gone
     set_flow_control(_flow_control);
 
-#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)|| defined(AT32F4)
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
     // F7 has built-in support for inversion in all uarts
     ioline_t rx_line = (options & OPTION_SWAP)?atx_line:arx_line;
     ioline_t tx_line = (options & OPTION_SWAP)?arx_line:atx_line;
@@ -1642,6 +1665,28 @@ bool UARTDriver::set_options(uint16_t options)
         cr2 &= ~USART_CR2_SWAP;
         _cr2_options &= ~USART_CR2_SWAP;
     }
+#elif defined(AT32F4)
+    // ATF4 can NOT do inversion by GPIO if enabled in hwdef.dat, using
+    // TXINV and RXINV options
+    if (options & OPTION_RXINV) {
+             ret = false;
+    }
+    
+    if (options & OPTION_TXINV) {
+            ret = false;
+    }
+    
+    if (options & OPTION_SWAP){
+         cr2 |= USART_CR2_SWAP;
+        _cr2_options |= USART_CR2_SWAP;
+    } else {
+        cr2 &= ~USART_CR2_SWAP;
+        _cr2_options &= ~USART_CR2_SWAP;
+    }
+
+
+
+
 #else // STM32F4
     // F4 can do inversion by GPIO if enabled in hwdef.dat, using
     // TXINV and RXINV options
