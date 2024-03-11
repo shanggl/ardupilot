@@ -91,6 +91,13 @@ I2CBus I2CDeviceManager::businfo[ARRAY_SIZE(I2CD)];
 #define HAL_I2C_G4_400_TIMINGR 0x20501E65
 #endif
 
+//todo: FIX THIS VALUE IN THE FUTURE
+#ifndef HAL_I2C_ATF4_100_TIMINGR
+#define HAL_I2C_ATF4_100_TIMINGR 0x30812E3E
+#endif
+#ifndef HAL_I2C_ATF4_400_TIMINGR
+#define HAL_I2C_ATF4_400_TIMINGR 0x6000030D
+#endif
 /*
   enable clear (toggling SCL) on I2C bus timeouts which leave SDA stuck low
  */
@@ -248,6 +255,14 @@ I2CDeviceManager::I2CDeviceManager(void)
             businfo[i].i2ccfg.timingr = HAL_I2C_G4_400_TIMINGR;
             businfo[i].busclock = 400000;
         }
+#elif defined(AT32F4)
+        if (businfo[i].busclock <= 100000) {
+            businfo[i].i2ccfg.timingr = HAL_I2C_ATF4_100_TIMINGR;
+            businfo[i].busclock = 100000;
+        } else {
+            businfo[i].i2ccfg.timingr = HAL_I2C_ATF4_400_TIMINGR;
+            businfo[i].busclock = 400000;
+        }
 #else // F1 or F4
         businfo[i].i2ccfg.op_mode = OPMODE_I2C;
         businfo[i].i2ccfg.clock_speed = businfo[i].busclock;
@@ -272,7 +287,7 @@ I2CDevice::I2CDevice(uint8_t busnum, uint8_t address, uint32_t bus_clock, bool u
     asprintf(&pname, "I2C:%u:%02x",
              (unsigned)busnum, (unsigned)address);
     if (bus_clock < bus.busclock) {
-#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS) || defined(AT32F4)
         if (bus_clock <= 100000) {
             bus.i2ccfg.timingr = HAL_I2C_F7_100_TIMINGR;
             bus.busclock = 100000;
@@ -319,7 +334,7 @@ bool I2CDevice::transfer(const uint8_t *send, uint32_t send_len,
         return false;
     }
 
-#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)
+#if defined(STM32F7) || defined(STM32H7) || defined(STM32F3) || defined(STM32G4) || defined(STM32L4) || defined(STM32L4PLUS)|| defined(AT32F4)
     if (_use_smbus) {
         bus.i2ccfg.cr1 |= I2C_CR1_SMBHEN;
     } else {
