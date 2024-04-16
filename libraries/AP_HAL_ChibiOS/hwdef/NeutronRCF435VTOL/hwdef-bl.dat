@@ -4,6 +4,10 @@
 # MCU class and specific type
 MCU AT32F435_437xM AT32F435_437xMxx
 
+#for debug
+env OPTIMIZE -Og
+
+
 # board ID for firmware load
 APJ_BOARD_ID 1125
 
@@ -22,7 +26,7 @@ PD14 LED_ACTIVITY  OUTPUT LOW
 define HAL_LED_ON 0
 
 # the location where the bootloader will put the firmware
-FLASH_BOOTLOADER_LOAD_KB 0
+FLASH_BOOTLOADER_LOAD_KB 64
 
 
 # order of UARTs

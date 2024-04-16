@@ -221,7 +221,6 @@ class Board:
             '-Wno-redundant-decls',
             '-Wno-unknown-pragmas',
             '-Wno-trigraphs',
-            '-Werror=shadow',
             '-Werror=return-type',
             '-Werror=unused-result',
             '-Werror=unused-variable',
@@ -356,7 +355,6 @@ class Board:
             '-Werror=type-limits',
             '-Werror=undef',
             '-Werror=unused-result',
-            '-Werror=shadow',
             '-Werror=unused-value',
             '-Werror=unused-variable',
             '-Werror=delete-non-virtual-dtor',
@@ -1087,12 +1085,15 @@ class chibios(Board):
             '-Werror=deprecated-declarations',
             '-DNDEBUG=1'
         ]
+
+
         if not cfg.options.Werror:
             env.CFLAGS += [
             '-Wno-error=double-promotion',
             '-Wno-error=missing-declarations',
             '-Wno-error=float-equal',
             '-Wno-error=cpp',
+            '-Wno-error=shadow',
             ]
 
         env.CXXFLAGS += env.CFLAGS + [

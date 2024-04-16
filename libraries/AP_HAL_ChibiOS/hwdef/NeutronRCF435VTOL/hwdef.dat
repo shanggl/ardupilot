@@ -5,6 +5,8 @@
 # MCU class and specific type
 MCU AT32F435_437xM AT32F435_437xMxx
 
+#for debug
+env OPTIMIZE -Og
 
 # board ID for firmware load
 APJ_BOARD_ID 1125
@@ -19,7 +21,7 @@ define CH_CFG_ST_RESOLUTION 32
 
 FLASH_SIZE_KB 4032
 define HAL_STORAGE_SIZE 15360
-#STORAGE_FLASH_PAGE 1
+#STORAGE_FLASH_PAGE 16
 
 # bootloader is installed at zero offset
 FLASH_RESERVE_START_KB 0

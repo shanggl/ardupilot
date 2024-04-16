@@ -239,6 +239,7 @@ bool flash_write_buffer(uint32_t address, const uint32_t *v, uint8_t nwords)
     }
     return true;
 }
+#ifndef AT32F435_437xx
 
 uint32_t get_mcu_id(void)
 {
@@ -247,7 +248,6 @@ uint32_t get_mcu_id(void)
 
 #define REVID_MASK	0xFFFF0000
 #define DEVID_MASK	0xFFF
-
 uint32_t get_mcu_desc(uint32_t max, uint8_t *revstr)
 {
     uint32_t idcode = (*(uint32_t *)DBGMCU_BASE);
@@ -283,6 +283,34 @@ uint32_t get_mcu_desc(uint32_t max, uint8_t *revstr)
 
     return  strp - revstr;
 }
+#else 
+#define DEVID_MASK	0x0000FFFF
+
+uint32_t get_mcu_id(void)
+{
+    return *(uint32_t *)DEBUG_BASE;
+}
+
+uint32_t get_mcu_desc(uint32_t max, uint8_t *revstr)
+{
+    uint32_t idcode = (*(uint32_t *)DEBUG_BASE);
+    int32_t mcuid = idcode & DEVID_MASK;
+    uint8_t *endp = &revstr[max - 1];
+    uint8_t *strp = revstr;
+
+    for (const auto &desc : mcu_descriptions) {
+        if (mcuid == desc.mcuid) {
+            // copy the string in:
+            const char *tmp = desc.desc;
+            while (strp < endp && *tmp) {
+                *strp++ = *tmp++;
+            }
+            break;
+        }
+    }
+    return  strp - revstr;
+}
+#endif 
 
 void led_on(unsigned led)
 {

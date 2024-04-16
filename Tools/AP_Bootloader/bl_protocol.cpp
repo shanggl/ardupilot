@@ -323,10 +323,16 @@ jump_to_app()
 #elif defined(STM32L4PLUS)
     rccDisableAPB1R1(~0);
     rccDisableAPB1R2(~0);
+#elif defined(AT32F435_437xx)
+    crm_reset();
 #else
     rccDisableAPB1(~0);
 #endif
+
+#if !defined(AT32F435_437xx) 
     rccDisableAPB2(~0);
+#endif
+
 #if HAL_USE_SERIAL_USB == TRUE
 #if !STM32_OTG2_IS_OTG1
     rccResetOTG_FS();
